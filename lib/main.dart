@@ -47,7 +47,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   bool _hasError = false;
   double _progress = 0.0;
 
-  static const String _targetUrl = 'https://montanahd2.com/';
+  static const String _targetUrl = 'https://app.montanahd2.com/home';
 
   // İzin verilen domainler — app.montanahd2.com dahil tüm alt domainler
   static const List<String> _allowedDomains = [

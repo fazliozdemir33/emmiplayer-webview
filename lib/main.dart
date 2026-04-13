@@ -174,10 +174,26 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
   // Harici uygulamada (varsayılan tarayıcı) açma metodu
   Future<void> _launchExternal(Uri uri) async {
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      debugPrint('Açılamayan bağlantı: $uri');
+    try {
+      final success = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!success) {
+        debugPrint('Bağlantı başlatılamadı (sistem reddetti): $uri');
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Dosya açılamadı. Lütfen telefonunuzda bir tarayıcı yüklü olduğundan emin olun.')),
+           );
+        }
+      }
+    } catch (e) {
+      debugPrint('Launch Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata oluştu: ${e.toString()}')),
+        );
+      }
     }
   }
 

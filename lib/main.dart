@@ -180,6 +180,67 @@ class _WebViewScreenState extends State<WebViewScreen> {
     }
   }
 
+  // Oynatılan videoyu HTML içerisinden çalıp bulmaya çalışan metod
+  Future<void> _tryDownloadVideo() async {
+    const String jsCode = '''
+      (function() {
+        var video = document.querySelector('video');
+        if (video && video.src && !video.src.startsWith('blob:')) {
+          return video.src;
+        }
+        var source = document.querySelector('video source');
+        if (source && source.src && !source.src.startsWith('blob:')) {
+          return source.src;
+        }
+        // İframe içindeki oynatıcıları da kontrol etmeyi dene
+        var iframes = document.querySelectorAll('iframe');
+        for (var i=0; i<iframes.length; i++) {
+           try {
+             var v = iframes[i].contentWindow.document.querySelector('video');
+             if (v && v.src && !v.src.startsWith('blob:')) return v.src;
+             var s = iframes[i].contentWindow.document.querySelector('video source');
+             if (s && s.src && !s.src.startsWith('blob:')) return s.src;
+           } catch(e) {}
+        }
+        return 'not_found';
+      })();
+    ''';
+    
+    try {
+      final Object result = await _controller.runJavaScriptReturningResult(jsCode);
+      String url = result.toString();
+      
+      // Çift tırnakları veya tek tırnakları temizle
+      if (url.startsWith('"') && url.endsWith('"')) {
+        url = url.substring(1, url.length - 1);
+      } else if (url.startsWith("'") && url.endsWith("'")) {
+        url = url.substring(1, url.length - 1);
+      }
+
+      if (url == 'not_found' || url.isEmpty || url == 'null') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sayfada direkt video bağlantısı bulunamadı. Lütfen videoyu başlatıp tekrar deneyin.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        final uri = Uri.tryParse(url);
+        if (uri != null) {
+          _launchExternal(uri);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sayfadan video linki okunamadı (korumalı oynatıcı).')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -273,6 +334,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
             ],
           ),
         ),
+        floatingActionButton: (!_hasError && !_isLoading) ? FloatingActionButton(
+          onPressed: _tryDownloadVideo,
+          backgroundColor: const Color(0xFFE50914),
+          foregroundColor: Colors.white,
+          tooltip: 'Bu Videoyu İndir',
+          child: const Icon(Icons.download_rounded),
+        ) : null,
       ),
     );
   }

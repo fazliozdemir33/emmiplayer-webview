@@ -449,7 +449,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       autoPlay: true,
       looping: false,
       fullScreenByDefault: true,
-      backgroundColor: Colors.black,
     );
     setState(() {});
   }

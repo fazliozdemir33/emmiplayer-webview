@@ -58,6 +58,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     'gstatic.com',
     'cloudflare.com',
     'cloudflarestream.com',
+    'mntdns1.vip',           // IPTV sunucusu
     'jwplatform.com',
     'jwpcdn.com',
     'jwplayer.com',

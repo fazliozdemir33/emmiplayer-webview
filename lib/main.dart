@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -132,6 +133,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
             }
 
             final host = uri.host.toLowerCase();
+            final path = uri.path.toLowerCase();
+
+            // İndirilebilir video dosyası yakalanırsa, telefonun varsayılan tarayıcısına pasla
+            // Bu sayede sistemin kendi indirme yöneticisi devreye girer.
+            if (path.endsWith('.mp4') || path.endsWith('.mkv') || path.endsWith('.ts') || path.endsWith('.m3u8') || path.endsWith('.apk')) {
+              _launchExternal(uri);
+              // WebView üzerinde gezinmeyi kapat (sadece indirme tetiklensin)
+              return NavigationDecision.prevent;
+            }
 
             // İzin verilen domainleri kontrol et (alt domainler dahil)
             final isAllowed = _allowedDomains.any(
@@ -147,7 +157,27 @@ class _WebViewScreenState extends State<WebViewScreen> {
           },
         ),
       )
+      ..addJavaScriptChannel(
+        'EmmiApp',
+        onMessageReceived: (JavaScriptMessage message) {
+          // Eğer sitenizdeki bir butondan "EmmiApp.postMessage('video_url')" çalıştırılırsa:
+          final url = message.message;
+          final uri = Uri.tryParse(url);
+          if (uri != null) {
+            _launchExternal(uri);
+          }
+        },
+      )
       ..loadRequest(Uri.parse(_targetUrl));
+  }
+
+  // Harici uygulamada (varsayılan tarayıcı) açma metodu
+  Future<void> _launchExternal(Uri uri) async {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint('Açılamayan bağlantı: $uri');
+    }
   }
 
   @override

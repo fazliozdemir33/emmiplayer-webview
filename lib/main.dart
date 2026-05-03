@@ -9,9 +9,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase with the provided configuration
+  try {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyBuqj4jKvzVDsQl71OK2UzmrPGdN-6rXEA",
+        appId: "1:94061509633:web:3f8d7cdaad0518e5b7d400",
+        messagingSenderId: "94061509633",
+        projectId: "detasoft-comtr",
+        storageBucket: "detasoft-comtr.firebasestorage.app",
+        measurementId: "G-DNT1F8JGFS",
+      ),
+    );
+  } catch (e) {
+    debugPrint("Firebase initialization error: $e");
+  }
+
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -59,8 +78,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
   CancelToken? _cancelToken;
   bool _appBarVisible = false;
 
-  static const String _targetUrl = 'https://app.montanahd3.com/login';
-  static const List<String> _allowedDomains = [
+  String _targetUrl = 'https://app.montanahd4.com/home';
+  final List<String> _allowedDomains = [
+    'montanahd4.com',
     'montanahd3.com',
     'mntdns1.vip',
     'youtube.com',
@@ -105,8 +125,42 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
   @override
   void initState() {
-    super.initState();;
-    _initWebView();
+    super.initState();
+    _fetchConfigAndInit();
+  }
+
+  Future<void> _fetchConfigAndInit() async {
+    try {
+      // Fetch URL from Firebase Firestore
+      // Collection: settings, Document: app_config, Field: url
+      final doc = await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('app_config')
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        final dynamic remoteUrl = doc.data()!['url'];
+        if (remoteUrl != null && remoteUrl.toString().isNotEmpty) {
+          final String url = remoteUrl.toString();
+          setState(() {
+            _targetUrl = url;
+            
+            // Add the host of the remote URL to allowed domains
+            final uri = Uri.tryParse(url);
+            if (uri != null && uri.host.isNotEmpty) {
+              final host = uri.host.toLowerCase();
+              if (!_allowedDomains.contains(host)) {
+                _allowedDomains.add(host);
+              }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching remote config: $e");
+    } finally {
+      _initWebView();
+    }
   }
 
   void _initWebView() {
